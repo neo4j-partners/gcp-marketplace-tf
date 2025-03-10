@@ -1,1 +1,53 @@
- 
+# Terraform files
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+terraform.tfstate.*.backup
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+crash.log
+crash.*.log
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+# Ignore plan output files
+tfplan
+*.tfplan
+
+# Ignore local testing files
+.test/
+
+# Ignore generated files
+*.generated.*
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Editor specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Credentials
+credentials.json
+*.pem
+*.key
+*.crt
+*.p12
+service-account*.json
+
+# Ignore any local environment files
+.env
+.envrc
