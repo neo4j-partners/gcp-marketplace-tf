@@ -33,7 +33,7 @@ check_prerequisites() {
   
   # Check if terraform is installed
   if ! command_exists terraform; then
-    log "Terraform is not installed. Please install Terraform 1.0.0 or newer." "ERROR"
+    log "Terraform is not installed. Please install Terraform 1.2.0 or newer." "ERROR"
     exit 1
   fi
   

@@ -9,7 +9,7 @@ This Terraform module deploys Neo4j Enterprise on Google Cloud Platform (GCP). I
 - Uses individual VMs instead of Managed Instance Groups
 - Configures networking, firewall rules, and persistent storage
 - Optional Neo4j Bloom installation
-- Uses pd-ssd
+- Configurable disk type (default: pd-ssd)
 - Available on GCP Marketplace
 
 ## Repository Structure
@@ -29,7 +29,7 @@ neo4j-terraform-gcp/
 
 ## Prerequisites
 
-- Terraform 1.0.0 or newer
+- Terraform 1.2.0 or newer
 - Google Cloud SDK
 - A GCP project with billing enabled
 - Appropriate permissions to create resources in GCP
@@ -43,7 +43,7 @@ neo4j-terraform-gcp/
 3. Configure the deployment parameters
 4. Review and Launch
 
-### Option 2: Use the Module
+### Option 2: Use the Module Directly
 
 1. Copy `terraform.tfvars.example` to `terraform.tfvars` and update the values
 2. Initialize Terraform:
@@ -77,6 +77,7 @@ The following variables can be configured in your `terraform.tfvars` file:
 | node_count | Number of Neo4j nodes | 3 |
 | machine_type | GCP machine type | c3-standard-4 |
 | disk_size | Data disk size in GB | 100 |
+| disk_type | Type of disk to use | pd-ssd |
 | admin_password | Neo4j admin password | (Required) |
 | license_type | Neo4j license type (Commercial or Evaluation) | Evaluation |
 
@@ -112,6 +113,7 @@ The module includes test configurations in the `test/` directory:
 - For production deployments, it's recommended to restrict the `firewall_source_range` to specific IP ranges
 - The default machine type (c3-standard-4) is suitable for most workloads, but can be adjusted based on your requirements
 - For large datasets, consider increasing the `disk_size` parameter
+- The startup script includes robust error handling and non-interactive installation to ensure reliable deployment
 
 ## License
 
