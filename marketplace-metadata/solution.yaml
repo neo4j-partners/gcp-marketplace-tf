@@ -1,0 +1,80 @@
+apiVersion: template.cloud.google.com/v1alpha1
+kind: Solution
+metadata:
+  name: neo4j-enterprise
+  version: 1.0.0
+  displayName: Neo4j Enterprise
+  description: |-
+    Neo4j is a native graph database platform that helps organizations make sense of their data by revealing how people, processes and systems are interrelated.
+    
+    Neo4j Enterprise Edition provides all the features of the Community Edition plus:
+    - Clustering for high availability and scalability
+    - Advanced security features
+    - Monitoring and management tools
+    - LDAP/Active Directory integration
+    - Hot backups
+    - Multi-data center support
+  tagline: The world's leading graph database platform
+  url: https://neo4j.com/
+  documentations:
+    - title: Neo4j Documentation
+      url: https://neo4j.com/docs/
+      destinations: [DESTINATION_SOLUTION_DETAILS, DESTINATION_POST_DEPLOY]
+    - title: Neo4j Operations Manual
+      url: https://neo4j.com/docs/operations-manual/current/
+      destinations: [DESTINATION_SOLUTION_DETAILS]
+  support:
+    - title: Support
+      url: https://support.neo4j.com/
+      destinations: [DESTINATION_SOLUTION_DETAILS, DESTINATION_POST_DEPLOY]
+  icon: https://neo4j.com/wp-content/themes/neo4jweb/assets/images/neo4j-logo-2015.png
+  softwareGroups:
+    - type: SOFTWARE_GROUP_OS
+      software:
+        - title: Ubuntu
+          version: 22.04 LTS
+    - type: SOFTWARE_GROUP_APPLICATION
+      software:
+        - title: Neo4j Enterprise
+          version: Latest
+  tagGroups:
+    - title: Database
+      tags:
+        - Graph Database
+        - NoSQL
+    - title: Features
+      tags:
+        - High Availability
+        - Clustering
+        - ACID Compliance
+  eula:
+    url: https://neo4j.com/terms/enterprise-edition/
+  eulaContentType: URL
+  eulaContentTypeInfo: URL
+  privacyPolicy:
+    url: https://neo4j.com/privacy-policy/
+  termsOfService:
+    url: https://neo4j.com/terms/
+  billingInfo:
+    title: Neo4j Enterprise Pricing
+    url: https://neo4j.com/pricing/
+  costComponents:
+    - title: Neo4j Enterprise License
+      description: License for Neo4j Enterprise Edition
+      type: COST_COMPONENT_SOFTWARE
+    - title: Compute Engine
+      description: Google Compute Engine instances
+      type: COST_COMPONENT_COMPUTE
+    - title: Storage
+      description: Persistent disk storage
+      type: COST_COMPONENT_STORAGE
+  architectureDiagrams:
+    - title: Neo4j Cluster Architecture
+      url: https://neo4j.com/docs/operations-manual/current/clustering/introduction/
+      description: Neo4j Causal Clustering architecture
+  releaseNotes:
+    - version: 1.0.0
+      date: '2025-03-10'
+      details: Initial release of Neo4j Enterprise on Google Cloud Marketplace
+  deployerImage: gcr.io/cloud-marketplace-tools/metering/deployer:0.1.0
+  terraformVersion: ">= 1.0.0" 
