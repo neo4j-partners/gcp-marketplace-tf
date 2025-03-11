@@ -124,12 +124,10 @@ configure_neo4j() {
     sed -i "s/#server.default_advertised_address=localhost/server.default_advertised_address=$NODE_EXTERNAL_IP/g" $NEO4J_CONF
     sed -i 's/#server.bolt.listen_address=:7687/server.bolt.listen_address=0.0.0.0:7687/g' $NEO4J_CONF
     sed -i "s/#server.bolt.advertised_address=:7687/server.bolt.advertised_address=$NODE_EXTERNAL_IP:7687/g" $NEO4J_CONF
-
-    # Configure data directory
-    echo "dbms.directories.data=/data/neo4j/data" >> $NEO4J_CONF
-    echo "dbms.directories.plugins=/data/neo4j/plugins" >> $NEO4J_CONF
-    echo "dbms.directories.logs=/data/neo4j/logs" >> $NEO4J_CONF
-    echo "dbms.directories.import=/data/neo4j/import" >> $NEO4J_CONF
+    
+    # Configure HTTP endpoint for Neo4j Browser - only add this once
+    sed -i 's/#server.http.listen_address=:7474/server.http.listen_address=0.0.0.0:7474/g' $NEO4J_CONF
+    sed -i "s/#server.http.advertised_address=:7474/server.http.advertised_address=$NODE_EXTERNAL_IP:7474/g" $NEO4J_CONF
 
     # Security settings
     echo "dbms.security.procedures.unrestricted=apoc.*,bloom.*" >> $NEO4J_CONF
@@ -178,9 +176,16 @@ configure_clustering() {
         echo "Configuring Neo4j cluster..."
         
         # Discovery and cluster settings
+        sed -i 's/#server.discovery.listen_address=:5000/server.discovery.listen_address=0.0.0.0:5000/g' $NEO4J_CONF
         sed -i "s/#server.discovery.advertised_address=:5000/server.discovery.advertised_address=$NODE_INTERNAL_IP:5000/g" $NEO4J_CONF
+        
+        sed -i 's/#server.cluster.listen_address=:6000/server.cluster.listen_address=0.0.0.0:6000/g' $NEO4J_CONF
         sed -i "s/#server.cluster.advertised_address=:6000/server.cluster.advertised_address=$NODE_INTERNAL_IP:6000/g" $NEO4J_CONF
+        
+        sed -i 's/#server.cluster.raft.listen_address=:7000/server.cluster.raft.listen_address=0.0.0.0:7000/g' $NEO4J_CONF
         sed -i "s/#server.cluster.raft.advertised_address=:7000/server.cluster.raft.advertised_address=$NODE_INTERNAL_IP:7000/g" $NEO4J_CONF
+        
+        sed -i 's/#server.routing.listen_address=:7688/server.routing.listen_address=0.0.0.0:7688/g' $NEO4J_CONF
         sed -i "s/#server.routing.advertised_address=:7688/server.routing.advertised_address=$NODE_INTERNAL_IP:7688/g" $NEO4J_CONF
         
         # Set initial cluster size
