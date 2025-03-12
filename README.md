@@ -33,6 +33,7 @@ neo4j-terraform-gcp/
 - Google Cloud SDK
 - A GCP project with billing enabled
 - Appropriate permissions to create resources in GCP
+- Default project configured in gcloud CLI (`gcloud config set project YOUR_PROJECT_ID`)
 
 ## Usage
 
@@ -45,20 +46,25 @@ neo4j-terraform-gcp/
 
 ### Option 2: Use the Module Directly
 
-1. Copy `terraform.tfvars.example` to `terraform.tfvars` and update the values
-2. Initialize Terraform:
+1. Ensure your default GCP project is set in gcloud CLI:
+```bash
+gcloud config set project YOUR_PROJECT_ID
+```
+
+2. Copy `terraform.tfvars.example` to `terraform.tfvars` and update the values
+3. Initialize Terraform:
 
 ```bash
 terraform init
 ```
 
-3. Plan the deployment:
+4. Plan the deployment:
 
 ```bash
 terraform plan
 ```
 
-4. Apply the configuration:
+5. Apply the configuration:
 
 ```bash
 terraform apply
@@ -70,10 +76,9 @@ The following variables can be configured in your `terraform.tfvars` file:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| project_id | GCP Project ID | (Required) |
 | region | GCP Region | us-central1 |
 | zone | GCP Zone | us-central1-a |
-| environment | Environment label | dev |
+| deployment_name | Deployment name | neo4j |
 | node_count | Number of Neo4j nodes | 3 |
 | machine_type | GCP machine type | c3-standard-4 |
 | disk_size | Data disk size in GB | 100 |
@@ -82,6 +87,8 @@ The following variables can be configured in your `terraform.tfvars` file:
 | license_type | Neo4j license type (Commercial or Evaluation) | Evaluation |
 
 For a complete list of inputs, see the [variables.tf](./variables.tf) file.
+
+> **Note:** The GCP project used for deployment will be automatically determined from your default project in the gcloud CLI. There is no need to specify a project_id in your variables file.
 
 ## Outputs
 

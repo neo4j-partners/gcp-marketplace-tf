@@ -1,11 +1,11 @@
 locals {
   neo4j_image = "ubuntu-os-cloud/ubuntu-2204-lts"
-  neo4j_tag   = "neo4j-${var.environment}"
+  neo4j_tag   = "neo4j-${var.deployment_name}"
 }
 
 resource "google_compute_instance" "neo4j" {
   count        = var.node_count
-  name         = "neo4j-${var.environment}-${count.index + 1}"
+  name         = "neo4j-${var.deployment_name}-${count.index + 1}"
   machine_type = var.machine_type
   zone         = var.zone
   tags         = [local.neo4j_tag]
@@ -37,8 +37,8 @@ ${templatefile("${path.module}/scripts/startup.sh", {
   admin_password   = var.admin_password
   install_bloom    = var.install_bloom ? "Yes" : "No"
   bloom_license_key = var.bloom_license_key
-  environment      = var.environment
-  project_id       = var.project_id
+  deployment_name  = var.deployment_name
+  project_id       = local.project_id
   license_type     = var.license_type
 })}
 SCRIPT
@@ -60,13 +60,13 @@ EOF
 
 resource "google_compute_disk" "neo4j_data" {
   count = var.node_count
-  name  = "neo4j-data-${var.environment}-${count.index + 1}"
+  name  = "neo4j-data-${var.deployment_name}-${count.index + 1}"
   type  = "pd-ssd"
   zone  = var.zone
   size  = var.disk_size
 
   labels = {
-    environment = var.environment
+    deployment = var.deployment_name
   }
 }
 

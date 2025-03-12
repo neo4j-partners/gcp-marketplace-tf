@@ -10,9 +10,11 @@ NC='\033[0m' # No Color
 # Configuration
 TEST_VAR_FILE="test/marketplace_test.tfvars"
 LOG_FILE="test/test_deployment.log"
-TEST_PROJECT_ID=$(grep project_id $TEST_VAR_FILE | cut -d '=' -f2 | tr -d ' "')
+TEST_PROJECT_ID=$(gcloud config get-value project)
 TEST_REGION=$(grep region $TEST_VAR_FILE | head -1 | cut -d '=' -f2 | tr -d ' "')
 TEST_ZONE=$(grep zone $TEST_VAR_FILE | cut -d '=' -f2 | tr -d ' "')
+
+echo "$TEST_PROJECT_ID" > /tmp/google_project_id
 
 # Function to log messages
 log() {
@@ -65,6 +67,12 @@ check_prerequisites() {
     exit 1
   fi
   
+  # Check if project is set in gcloud config
+  if [ -z "$TEST_PROJECT_ID" ]; then
+    log "No project is set in gcloud config. Please run 'gcloud config set project YOUR_PROJECT_ID'." "ERROR"
+    exit 1
+  fi
+  
   # Check if project exists and user has access
   if ! gcloud projects describe "$TEST_PROJECT_ID" >/dev/null 2>&1; then
     log "Project $TEST_PROJECT_ID does not exist or you don't have access to it." "ERROR"
@@ -91,6 +99,8 @@ validate_terraform() {
 # Function to plan Terraform deployment
 plan_terraform() {
   log "Planning Terraform deployment..."
+  # Set the GOOGLE_PROJECT environment variable for Terraform
+  export GOOGLE_PROJECT=$TEST_PROJECT_ID
   terraform plan -var-file="$TEST_VAR_FILE" -out=tfplan | tee -a $LOG_FILE
   log "Terraform plan created successfully." "SUCCESS"
 }
@@ -98,6 +108,8 @@ plan_terraform() {
 # Function to apply Terraform configuration
 apply_terraform() {
   log "Applying Terraform configuration..."
+  # Set the GOOGLE_PROJECT environment variable for Terraform
+  export GOOGLE_PROJECT=$TEST_PROJECT_ID
   terraform apply tfplan | tee -a $LOG_FILE
   log "Terraform configuration applied successfully." "SUCCESS"
 }
@@ -130,13 +142,13 @@ verify_deployment() {
       log "Setting active project to: $ACTUAL_PROJECT_ID"
       # Set the active project
       gcloud config set project "$ACTUAL_PROJECT_ID"
+      # Update TEST_PROJECT_ID to match the actual project
+      TEST_PROJECT_ID=$ACTUAL_PROJECT_ID
     else
-      log "Could not parse project ID from self-link: $INSTANCE_SELF_LINK, using project from variables: $TEST_PROJECT_ID"
-      gcloud config set project "$TEST_PROJECT_ID"
+      log "Could not parse project ID from self-link: $INSTANCE_SELF_LINK, using current project: $TEST_PROJECT_ID"
     fi
   else
-    log "Could not determine project ID from instance self-link, using project from variables: $TEST_PROJECT_ID"
-    gcloud config set project "$TEST_PROJECT_ID"
+    log "Could not determine project ID from instance self-link, using current project: $TEST_PROJECT_ID"
   fi
   
   # Verify instances are running
@@ -180,6 +192,8 @@ verify_deployment() {
 cleanup_resources() {
   if [ "$1" == "--cleanup" ]; then
     log "Cleaning up resources..."
+    # Set the GOOGLE_PROJECT environment variable for Terraform
+    export GOOGLE_PROJECT=$TEST_PROJECT_ID
     terraform destroy -var-file="$TEST_VAR_FILE" -auto-approve | tee -a $LOG_FILE
     log "Resources cleaned up successfully." "SUCCESS"
   else

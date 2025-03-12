@@ -1,7 +1,6 @@
-project_id        = "gcp-project"
 region           = "us-central1"
 zone             = "us-central1-a"
-environment      = "test"
+deployment_name  = "test"
 network_name     = "test-network"
 subnetwork_name  = "test-subnet"
 create_network   = true

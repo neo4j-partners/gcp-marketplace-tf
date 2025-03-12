@@ -1,8 +1,3 @@
-variable "project_id" {
-  description = "The GCP project ID"
-  type        = string
-}
-
 variable "license_type" {
   description = "Neo4j license type (Commercial or Evaluation)"
   type        = string
@@ -24,10 +19,10 @@ variable "zone" {
   default     = "us-central1-a"
 }
 
-variable "environment" {
-  description = "Environment label (e.g., dev, test, prod)"
+variable "deployment_name" {
+  description = "Deployment name"
   type        = string
-  default     = "dev"
+  default     = "neo4j"
 }
 
 variable "network_name" {
