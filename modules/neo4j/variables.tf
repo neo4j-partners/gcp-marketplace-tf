@@ -1,8 +1,3 @@
-variable "project_id" {
-  description = "The GCP project ID"
-  type        = string
-}
-
 variable "region" {
   description = "The GCP region where resources will be created"
   type        = string
@@ -13,8 +8,8 @@ variable "zone" {
   type        = string
 }
 
-variable "environment" {
-  description = "Environment label (e.g., dev, test, prod)"
+variable "deployment_name" {
+  description = "Deployment name"
   type        = string
 }
 

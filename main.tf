@@ -1,10 +1,9 @@
 module "neo4j" {
   source = "./modules/neo4j"
 
-  project_id            = var.project_id
   region                = var.region
   zone                  = var.zone
-  environment           = var.environment
+  deployment_name       = var.deployment_name
   network_name          = var.network_name
   subnetwork_name       = var.subnetwork_name
   create_network        = var.create_network

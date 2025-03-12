@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Export variables from Terraform template
-export environment=${environment}
+export deployment_name=${deployment_name}
 export node_count=${node_count}
 export admin_password=${admin_password}
 export install_bloom=${install_bloom}
@@ -16,7 +16,7 @@ get_instance_metadata() {
     export NODE_INTERNAL_IP=$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ip)
     export NODE_EXTERNAL_IP=$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip)
     export INSTANCE_NAME=$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/name)
-    # Extract node index from instance name (neo4j-environment-X format)
+    # Extract node index from instance name (neo4j-deployment_name-X format)
     export NODE_INDEX=$(echo $INSTANCE_NAME | sed 's/.*-//')
     
     # Print the values to verify
@@ -32,7 +32,7 @@ log_startup_info() {
     echo "Starting Neo4j setup script"
     echo "Node count: $node_count"
     echo "Node index: $NODE_INDEX"
-    echo "Environment: $environment"
+    echo "Deployment name: $deployment_name"
     echo "Instance name: $INSTANCE_NAME"
     echo "Internal IP: $NODE_INTERNAL_IP"
     echo "External IP: $NODE_EXTERNAL_IP"
@@ -224,7 +224,7 @@ discover_cluster_members() {
     CORE_MEMBERS=""
     
     for i in $(seq 1 ${node_count}); do
-        NODE_NAME="neo4j-${environment}-$i"
+        NODE_NAME="neo4j-${deployment_name}-$i"
         NODE_IP=$(getent hosts $NODE_NAME.c.$project_id.internal | awk '{ print $1 }')
         
         if [[ -z "$NODE_IP" ]]; then

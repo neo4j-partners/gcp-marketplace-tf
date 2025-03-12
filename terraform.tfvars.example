@@ -1,7 +1,6 @@
-project_id            = "your-project-id"
 region                = "us-central1"
 zone                  = "us-central1-a"
-environment           = "dev"
+deployment_name       = "neo4j"
 network_name          = "neo4j-network"
 subnetwork_name       = "neo4j-subnet"
 create_network        = true
