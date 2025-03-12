@@ -199,9 +199,6 @@ configure_clustering() {
         echo "Configuring Neo4j cluster..."
         
         # Discovery and cluster settings
-        configure_neo4j_setting "server.discovery.listen_address" "0.0.0.0:5000"
-        configure_neo4j_setting "server.discovery.advertised_address" "$NODE_INTERNAL_IP:5000"
-        
         configure_neo4j_setting "server.cluster.listen_address" "0.0.0.0:6000"
         configure_neo4j_setting "server.cluster.advertised_address" "$NODE_INTERNAL_IP:6000"
         
@@ -245,9 +242,8 @@ discover_cluster_members() {
     
     if [[ -n "$CORE_MEMBERS" ]]; then
         echo "Setting V2 discovery endpoints: $CORE_MEMBERS"
-        configure_neo4j_setting "dbms.cluster.discovery.version" "V2_ONLY"
         configure_neo4j_setting "dbms.cluster.discovery.resolver_type" "LIST"
-        configure_neo4j_setting "dbms.cluster.discovery.v2.endpoints" "$CORE_MEMBERS"
+        configure_neo4j_setting "dbms.cluster.endpoints" "$CORE_MEMBERS"
     fi
 }
 
