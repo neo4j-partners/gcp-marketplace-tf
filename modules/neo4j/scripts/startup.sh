@@ -113,6 +113,29 @@ install_neo4j() {
     # Enable the service
     systemctl enable neo4j
 }
+# Function to configure Neo4j settings.
+configure_neo4j_setting() {
+    local setting=$1
+    local value=$2
+    local confFile="/etc/neo4j/neo4j.conf"
+
+    # Check if the setting exists uncommented
+    if grep -q "^$${setting}=" "$confFile"; then
+        sed -i "s|^$${setting}=.*|$${setting}=$${value}|g" "$confFile"
+        echo "Replaced existing setting: $${setting}=$${value}"
+    # Check if the setting exists commented
+    elif grep -q "^#$${setting}=" "$confFile"; then
+        # Setting exists commented - add it after the comment line
+        sed -i "/^#$${setting}=/a $${setting}=$${value}" "$confFile"
+        echo "Added setting after comment: $${setting}=$${value}"
+    # Setting doesn't exist in the file
+    else
+        # Add to the end under "Other Neo4j system properties"
+        sed -i "/# Other Neo4j system properties/a $${setting}=$${value}" "$confFile"
+        echo "Added new setting to end: $${setting}=$${value}"
+    fi
+}
+
 
 # Configure Neo4j
 configure_neo4j() {
@@ -120,30 +143,30 @@ configure_neo4j() {
     NEO4J_CONF=/etc/neo4j/neo4j.conf
 
     # Basic configuration
-    sed -i 's/#server.default_listen_address=0.0.0.0/server.default_listen_address=0.0.0.0/g' $NEO4J_CONF
-    sed -i "s/#server.default_advertised_address=localhost/server.default_advertised_address=$NODE_EXTERNAL_IP/g" $NEO4J_CONF
-    sed -i 's/#server.bolt.listen_address=:7687/server.bolt.listen_address=0.0.0.0:7687/g' $NEO4J_CONF
-    sed -i "s/#server.bolt.advertised_address=:7687/server.bolt.advertised_address=$NODE_EXTERNAL_IP:7687/g" $NEO4J_CONF
-    
+    configure_neo4j_setting "server.default_listen_address" "0.0.0.0"
+    configure_neo4j_setting "server.default_advertised_address" "$NODE_EXTERNAL_IP"
+    configure_neo4j_setting "server.bolt.listen_address" "0.0.0.0:7687"
+    configure_neo4j_setting "server.bolt.advertised_address" "$NODE_EXTERNAL_IP:7687"
+
     # Configure HTTP endpoint for Neo4j Browser - only add this once
-    sed -i 's/#server.http.listen_address=:7474/server.http.listen_address=0.0.0.0:7474/g' $NEO4J_CONF
-    sed -i "s/#server.http.advertised_address=:7474/server.http.advertised_address=$NODE_EXTERNAL_IP:7474/g" $NEO4J_CONF
+    configure_neo4j_setting "server.http.listen_address" "0.0.0.0:7474"
+    configure_neo4j_setting "server.http.advertised_address" "$NODE_EXTERNAL_IP:7474"
 
     # Security settings
-    echo "dbms.security.procedures.unrestricted=apoc.*,bloom.*" >> $NEO4J_CONF
-    echo "dbms.security.procedures.allowlist=apoc.*,bloom.*" >> $NEO4J_CONF
-    echo "dbms.security.http_auth_allowlist=/,/browser.*,/bloom.*" >> $NEO4J_CONF
+    configure_neo4j_setting "dbms.security.procedures.unrestricted" "apoc.*,bloom.*"
+    configure_neo4j_setting "dbms.security.procedures.allowlist" "apoc.*,bloom.*"
+    configure_neo4j_setting "dbms.security.http_auth_allowlist" "/,/browser.*,/bloom.*"
 
     # Metrics configuration
-    echo "server.metrics.enabled=true" >> $NEO4J_CONF
-    echo "server.metrics.jmx.enabled=true" >> $NEO4J_CONF
-    echo "server.metrics.prefix=neo4j" >> $NEO4J_CONF
-    echo "server.metrics.filter=*" >> $NEO4J_CONF
-    echo "server.metrics.csv.interval=5s" >> $NEO4J_CONF
-    echo "dbms.routing.default_router=SERVER" >> $NEO4J_CONF
+    configure_neo4j_setting "server.metrics.enabled" "true"
+    configure_neo4j_setting "server.metrics.jmx.enabled" "true"
+    configure_neo4j_setting "server.metrics.prefix" "neo4j"
+    configure_neo4j_setting "server.metrics.filter" "*"
+    configure_neo4j_setting "server.metrics.csv.interval" "5s"
+    configure_neo4j_setting "dbms.routing.default_router" "SERVER"
 
     # SSRF protection
-    echo "internal.dbms.cypher_ip_blocklist=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.169.0/24,fc00::/7,fe80::/10,ff00::/8" >> $NEO4J_CONF
+    configure_neo4j_setting "internal.dbms.cypher_ip_blocklist" "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.169.0/24,fc00::/7,fe80::/10,ff00::/8"
 }
 
 # Install APOC plugin
@@ -164,7 +187,7 @@ configure_bloom() {
             echo "Configuring Bloom license..."
             mkdir -p /etc/neo4j/licenses
             echo "${bloom_license_key}" > /etc/neo4j/licenses/neo4j-bloom.license
-            echo "dbms.bloom.license_file=/etc/neo4j/licenses/neo4j-bloom.license" >> $NEO4J_CONF
+            configure_neo4j_setting "dbms.bloom.license_file" "/etc/neo4j/licenses/neo4j-bloom.license"
             chown -R neo4j:neo4j /etc/neo4j/licenses
         fi
     fi
@@ -176,23 +199,23 @@ configure_clustering() {
         echo "Configuring Neo4j cluster..."
         
         # Discovery and cluster settings
-        sed -i 's/#server.discovery.listen_address=:5000/server.discovery.listen_address=0.0.0.0:5000/g' $NEO4J_CONF
-        sed -i "s/#server.discovery.advertised_address=:5000/server.discovery.advertised_address=$NODE_INTERNAL_IP:5000/g" $NEO4J_CONF
+        configure_neo4j_setting "server.discovery.listen_address" "0.0.0.0:5000"
+        configure_neo4j_setting "server.discovery.advertised_address" "$NODE_INTERNAL_IP:5000"
         
-        sed -i 's/#server.cluster.listen_address=:6000/server.cluster.listen_address=0.0.0.0:6000/g' $NEO4J_CONF
-        sed -i "s/#server.cluster.advertised_address=:6000/server.cluster.advertised_address=$NODE_INTERNAL_IP:6000/g" $NEO4J_CONF
+        configure_neo4j_setting "server.cluster.listen_address" "0.0.0.0:6000"
+        configure_neo4j_setting "server.cluster.advertised_address" "$NODE_INTERNAL_IP:6000"
         
-        sed -i 's/#server.cluster.raft.listen_address=:7000/server.cluster.raft.listen_address=0.0.0.0:7000/g' $NEO4J_CONF
-        sed -i "s/#server.cluster.raft.advertised_address=:7000/server.cluster.raft.advertised_address=$NODE_INTERNAL_IP:7000/g" $NEO4J_CONF
+        configure_neo4j_setting "server.cluster.raft.listen_address" "0.0.0.0:7000"
+        configure_neo4j_setting "server.cluster.raft.advertised_address" "$NODE_INTERNAL_IP:7000"
         
-        sed -i 's/#server.routing.listen_address=:7688/server.routing.listen_address=0.0.0.0:7688/g' $NEO4J_CONF
-        sed -i "s/#server.routing.advertised_address=:7688/server.routing.advertised_address=$NODE_INTERNAL_IP:7688/g" $NEO4J_CONF
+        configure_neo4j_setting "server.routing.listen_address" "0.0.0.0:7688"
+        configure_neo4j_setting "server.routing.advertised_address" "$NODE_INTERNAL_IP:7688"
         
         # Set initial cluster size
-        sed -i "s/#initial.dbms.default_primaries_count=1/initial.dbms.default_primaries_count=3/g" $NEO4J_CONF
-        sed -i "s/#initial.dbms.default_secondaries_count=0/initial.dbms.default_secondaries_count=$(( node_count - 3 ))/g" $NEO4J_CONF
+        configure_neo4j_setting "initial.dbms.default_primaries_count" "3"
+        configure_neo4j_setting "initial.dbms.default_secondaries_count" "$(( node_count - 3 ))"
         
-        echo "dbms.cluster.minimum_initial_system_primaries_count=${node_count}" >> $NEO4J_CONF
+        configure_neo4j_setting "dbms.cluster.minimum_initial_system_primaries_count" "${node_count}"
         
         discover_cluster_members
     fi
@@ -222,9 +245,9 @@ discover_cluster_members() {
     
     if [[ -n "$CORE_MEMBERS" ]]; then
         echo "Setting V2 discovery endpoints: $CORE_MEMBERS"
-        echo "dbms.cluster.discovery.version=V2_ONLY" >> $NEO4J_CONF
-        echo "dbms.cluster.discovery.resolver_type=LIST" >> $NEO4J_CONF
-        echo "dbms.cluster.discovery.v2.endpoints=$CORE_MEMBERS" >> $NEO4J_CONF
+        configure_neo4j_setting "dbms.cluster.discovery.version" "V2_ONLY"
+        configure_neo4j_setting "dbms.cluster.discovery.resolver_type" "LIST"
+        configure_neo4j_setting "dbms.cluster.discovery.v2.endpoints" "$CORE_MEMBERS"
     fi
 }
 
