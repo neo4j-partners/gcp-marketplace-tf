@@ -1,9 +1,15 @@
-variable "license_type" {
-  description = "Neo4j license type (Commercial or Evaluation)"
+variable "project_id" {
+  description = "The ID of the project in which to provision resources."
   type        = string
+}
+
+variable "license_type" {
+  description = "Neo4j license type (enterprise-byol or evaluation)"
+  type        = string
+  default     = "enterprise-byol"
   validation {
-    condition     = contains(["Commercial", "Evaluation"], var.license_type)
-    error_message = "License type must be either Commercial or Evaluation."
+    condition     = contains(["enterprise-byol", "evaluation"], var.license_type)
+    error_message = "License type must be either 'enterprise-byol' (Bring Your Own License) or 'evaluation'."
   }
 }
 
@@ -14,15 +20,21 @@ variable "region" {
 }
 
 variable "zone" {
-  description = "The GCP zone where resources will be created"
+  description = "The zone for the solution to be deployed."
   type        = string
   default     = "us-central1-a"
 }
 
-variable "deployment_name" {
-  description = "Deployment name"
+variable "goog_cm_deployment_name" {
+  description = "The name of the deployment and VM instances."
   type        = string
   default     = "neo4j"
+}
+
+variable "source_image" {
+  description = "The image name for the disk for the VM instance."
+  type        = string
+  default     = "projects/launcher-public/global/images/neo4j-enterprise-edition-byol-v20250305"
 }
 
 variable "network_name" {
@@ -75,6 +87,7 @@ variable "admin_password" {
   description = "Password for the Neo4j admin user"
   type        = string
   sensitive   = true
+  default     = "Neo4j1234" # Default for validation only, will be overridden by user input
 }
 
 variable "install_bloom" {
@@ -92,6 +105,6 @@ variable "bloom_license_key" {
 
 variable "firewall_source_range" {
   description = "Source IP ranges for external access"
-  type        = list(string)
-  default     = ["0.0.0.0/0"]
+  type        = string
+  default     = "0.0.0.0/0"
 } 

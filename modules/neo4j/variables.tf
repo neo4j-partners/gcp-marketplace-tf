@@ -13,6 +13,11 @@ variable "deployment_name" {
   type        = string
 }
 
+variable "source_image" {
+  description = "Base image for the VM instance."
+  type        = string
+}
+
 variable "network_name" {
   description = "The name of the VPC network to use or create"
   type        = string
@@ -71,14 +76,19 @@ variable "bloom_license_key" {
 
 variable "firewall_source_range" {
   description = "Source IP ranges for external access"
-  type        = list(string)
+  type        = string
 }
 
 variable "license_type" {
-  description = "Neo4j license type (Commercial or Evaluation)"
+  description = "Neo4j license type (enterprise-byol or evaluation)"
   type        = string
   validation {
-    condition     = contains(["Commercial", "Evaluation"], var.license_type)
-    error_message = "License type must be either Commercial or Evaluation."
+    condition     = contains(["enterprise-byol", "evaluation"], var.license_type)
+    error_message = "License type must be either 'enterprise-byol' (Bring Your Own License) or 'evaluation'."
   }
+}
+
+variable "project_id" {
+  description = "The ID of the project in which to provision resources."
+  type        = string
 } 

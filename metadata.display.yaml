@@ -1,0 +1,125 @@
+apiVersion: blueprints.cloud.google.com/v1alpha1
+kind: BlueprintMetadata
+metadata:
+  name: neo4j-enterprise-display
+  annotations:
+    config.kubernetes.io/local-config: "true"
+spec:
+  ui:
+    input:
+      variables:
+        project_id:
+          name: project_id
+          title: Project ID
+          invisible: true
+        goog_cm_deployment_name:
+          name: goog_cm_deployment_name
+          title: Deployment Name
+        source_image:
+          name: source_image
+          title: Image version
+          enumValueLabels:
+            - label: neo4j-enterprise-edition-byol-v20250305
+              value: projects/launcher-public/global/images/neo4j-enterprise-edition-byol-v20250305
+          xGoogleProperty:
+            type: ET_GCE_DISK_IMAGE
+        machine_type:
+          name: machine_type
+          title: Machine type
+          xGoogleProperty:
+            type: ET_GCE_MACHINE_TYPE
+            zoneProperty: zone
+            gceMachineType:
+              minCpu: 4
+              minRamGb: 16
+        disk_size:
+          name: disk_size
+          title: Disk size in GB
+          max: 10000
+          section: storage
+        zone:
+          name: zone
+          title: Zone
+          xGoogleProperty:
+            type: ET_GCE_ZONE
+        region:
+          name: region
+          title: Region
+          xGoogleProperty:
+            type: ET_GCE_REGION
+        network_name:
+          name: network_name
+          title: Network name
+          section: networking
+          xGoogleProperty:
+            type: ET_GCE_NETWORK
+            gceNetwork:
+              allowSharedVpcs: true
+              machineTypeVariable: machine_type
+        subnetwork_name:
+          name: subnetwork_name
+          title: Subnetwork name
+          section: networking
+          xGoogleProperty:
+            type: ET_GCE_SUBNETWORK
+            zoneProperty: zone
+            gceSubnetwork:
+              networkVariable: network_name
+        create_network:
+          name: create_network
+          title: Create a new network
+          section: networking
+        subnetwork_cidr:
+          name: subnetwork_cidr
+          title: Subnetwork CIDR
+          section: networking
+          tooltip: 'Only used if creating a new network'
+        node_count:
+          name: node_count
+          title: Number of nodes
+          subtext: Number of Neo4j nodes to deploy
+          tooltip: Node count must be 1 (standalone) or 3/5/7 (cluster)
+          enumValueLabels:
+            - label: "1"
+              value: "1"
+            - label: "3"
+              value: "3"
+            - label: "5"
+              value: "5"
+            - label: "7"
+              value: "7"
+        admin_password:
+          name: admin_password
+          title: Admin password
+          subtext: Password for the Neo4j admin user
+          tooltip: The password must be at least 8 characters long
+          regexValidation: ^.{8,}$
+          validation: The password must be at least 8 characters long
+        install_bloom:
+          name: install_bloom
+          title: Install Neo4j Bloom
+          subtext: Whether to install Neo4j Bloom visualization tool
+        bloom_license_key:
+          name: bloom_license_key
+          title: Bloom License Key
+          subtext: License key for Neo4j Bloom (if installing)
+        firewall_source_range:
+          name: firewall_source_range
+          title: Source IP ranges for firewall rules
+          tooltip: 'Traffic is only allowed from sources within these IP address ranges. Use CIDR notation when entering ranges.'
+          placeholder: '0.0.0.0/0, 192.169.0.2/24'
+          section: networking
+        license_type:
+          name: license_type
+          title: License type
+          subtext: Neo4j Enterprise license type
+          enumValueLabels:
+            - label: "Enterprise (BYOL)"
+              value: "enterprise-byol"
+            - label: "Evaluation"
+              value: "evaluation"
+      sections:
+        - name: storage
+          title: Storage Configuration
+        - name: networking
+          title: Networking 

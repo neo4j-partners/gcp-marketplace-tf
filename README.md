@@ -9,22 +9,31 @@ This Terraform module deploys Neo4j Enterprise on Google Cloud Platform (GCP). I
 - Uses individual VMs instead of Managed Instance Groups
 - Configures networking, firewall rules, and persistent storage
 - Optional Neo4j Bloom installation
-- Configurable disk type (default: pd-ssd)
+- Uses SSD persistent disks (pd-ssd) for optimal performance
 - Available on GCP Marketplace
+- Fully compliant with GCP Marketplace requirements (uses only approved providers)
 
 ## Repository Structure
 
 ```
 neo4j-terraform-gcp/
-├── modules/                           # Terraform modules
+├── modules/                          # Terraform modules
 │   └── neo4j/                        # Main Neo4j module
+│       ├── scripts/                  # Startup scripts for Neo4j
+│       ├── main.tf                   # Main module configuration
+│       ├── network.tf                # Network configuration
+│       ├── variables.tf              # Module variables
+│       ├── outputs.tf                # Module outputs
+│       └── versions.tf               # Module provider requirements
 ├── test/                             # Test configurations
-├── marketplace-metadata/             # GCP Marketplace metadata
-├── main.tf                          # Root module configuration
-├── variables.tf                     # Root module variables
-├── outputs.tf                       # Root module outputs
-├── versions.tf                      # Provider and version constraints
-└── terraform.tfvars.example        # Example variables file
+├── metadata.yaml                     # GCP Marketplace metadata
+├── metadata.display.yaml             # GCP Marketplace display metadata
+├── logo.png                          # Logo for GCP Marketplace
+├── main.tf                           # Root module configuration
+├── variables.tf                      # Root module variables
+├── outputs.tf                        # Root module outputs
+├── versions.tf                       # Provider and version constraints
+└── terraform.tfvars.example          # Example variables file
 ```
 
 ## Prerequisites
@@ -76,28 +85,33 @@ The following variables can be configured in your `terraform.tfvars` file:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
+| project_id | GCP Project ID | (Required) |
 | region | GCP Region | us-central1 |
 | zone | GCP Zone | us-central1-a |
 | deployment_name | Deployment name | neo4j |
+| image | The VM image to use for Neo4j instances | projects/launcher-public/global/images/neo4j-enterprise-edition-byol-v20250305 |
 | node_count | Number of Neo4j nodes | 3 |
 | machine_type | GCP machine type | c3-standard-4 |
 | disk_size | Data disk size in GB | 100 |
 | disk_type | Type of disk to use | pd-ssd |
 | admin_password | Neo4j admin password | (Required) |
-| license_type | Neo4j license type (Commercial or Evaluation) | Evaluation |
+| license_type | Neo4j license type (enterprise-byol or evaluation) | enterprise-byol |
+| firewall_source_range | Source IP ranges for firewall rules (comma-separated) | 0.0.0.0/0 |
 
 For a complete list of inputs, see the [variables.tf](./variables.tf) file.
 
-> **Note:** The GCP project used for deployment will be automatically determined from your default project in the gcloud CLI. There is no need to specify a project_id in your variables file.
+> **Note for GCP Marketplace:** When deploying through GCP Marketplace, the `image` variable will be automatically set to the Marketplace-owned version of the VM image.
 
 ## Outputs
 
 | Output | Description |
 |--------|-------------|
-| neo4j_urls | URLs to access Neo4j Browser |
-| neo4j_bolt_endpoints | Bolt endpoints for Neo4j connections |
+| neo4j_url | URL to access Neo4j Browser |
+| neo4j_bolt_url | Bolt URL for connecting to Neo4j |
+| neo4j_ip_addresses | IP addresses of the Neo4j nodes |
 | neo4j_instance_names | Names of the Neo4j instances |
-| neo4j_instance_ips | IP addresses of the Neo4j instances |
+| neo4j_instance_zones | Zones where Neo4j instances are deployed |
+| neo4j_instance_machine_types | Machine types of Neo4j instances |
 
 ## Architecture
 
@@ -108,12 +122,24 @@ This module deploys:
 3. Neo4j VMs with attached persistent disks
 4. Configures Neo4j for standalone or clustered operation
 
+### Providers Used
+
+This module only uses the following approved GCP Marketplace providers:
+- google
+- google-beta
+
 ## Testing
 
 The module includes test configurations in the `test/` directory:
 
 - `verify_module.sh`: Basic verification for GCP Marketplace
 - `test_deployment.sh`: Comprehensive deployment testing using marketplace_test.tfvars
+
+The test script performs thorough checks to verify:
+- All instances are properly deployed
+- Neo4j services are running and accessible
+- Neo4j Browser and Bolt interfaces are operational
+- Cluster configuration is properly set up
 
 ## Notes
 

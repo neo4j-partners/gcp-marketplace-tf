@@ -10,11 +10,9 @@ NC='\033[0m' # No Color
 # Configuration
 TEST_VAR_FILE="test/marketplace_test.tfvars"
 LOG_FILE="test/test_deployment.log"
-TEST_PROJECT_ID=$(gcloud config get-value project)
+TEST_PROJECT_ID=$(grep project_id $TEST_VAR_FILE | head -1 | cut -d '=' -f2 | tr -d ' "')
 TEST_REGION=$(grep region $TEST_VAR_FILE | head -1 | cut -d '=' -f2 | tr -d ' "')
 TEST_ZONE=$(grep zone $TEST_VAR_FILE | cut -d '=' -f2 | tr -d ' "')
-
-echo "$TEST_PROJECT_ID" > /tmp/google_project_id
 
 # Function to log messages
 log() {
@@ -55,6 +53,12 @@ check_prerequisites() {
     exit 1
   fi
   
+  # Check if netcat is installed
+  if ! command_exists nc; then
+    log "netcat (nc) is not installed. Please install it for port checking." "ERROR"
+    exit 1
+  fi
+  
   # Check if test var file exists
   if [ ! -f "$TEST_VAR_FILE" ]; then
     log "Test variable file $TEST_VAR_FILE not found." "ERROR"
@@ -67,9 +71,9 @@ check_prerequisites() {
     exit 1
   fi
   
-  # Check if project is set in gcloud config
+  # Check if project ID is valid
   if [ -z "$TEST_PROJECT_ID" ]; then
-    log "No project is set in gcloud config. Please run 'gcloud config set project YOUR_PROJECT_ID'." "ERROR"
+    log "No project ID found in $TEST_VAR_FILE. Please add project_id to your tfvars file." "ERROR"
     exit 1
   fi
   
@@ -96,11 +100,10 @@ validate_terraform() {
   log "Terraform configuration is valid." "SUCCESS"
 }
 
-# Function to plan Terraform deployment
+# Function to plan Terraform configuration
 plan_terraform() {
   log "Planning Terraform deployment..."
-  # Set the GOOGLE_PROJECT environment variable for Terraform
-  export GOOGLE_PROJECT=$TEST_PROJECT_ID
+  # The project_id is already set in the test tfvars file
   terraform plan -var-file="$TEST_VAR_FILE" -out=tfplan | tee -a $LOG_FILE
   log "Terraform plan created successfully." "SUCCESS"
 }
@@ -108,8 +111,7 @@ plan_terraform() {
 # Function to apply Terraform configuration
 apply_terraform() {
   log "Applying Terraform configuration..."
-  # Set the GOOGLE_PROJECT environment variable for Terraform
-  export GOOGLE_PROJECT=$TEST_PROJECT_ID
+  # The project_id is already set in the test tfvars file
   terraform apply tfplan | tee -a $LOG_FILE
   log "Terraform configuration applied successfully." "SUCCESS"
 }
@@ -119,41 +121,22 @@ verify_deployment() {
   log "Verifying deployment..."
   
   # Get outputs
-  NEO4J_URLS=$(terraform output -json neo4j_urls | jq -r '.[]')
-  NEO4J_BOLT_ENDPOINTS=$(terraform output -json neo4j_bolt_endpoints | jq -r '.[]')
-  NEO4J_INSTANCE_NAMES=$(terraform output -json neo4j_instance_names | jq -r '.[]')
-  EXTERNAL_IPS=$(terraform output -json neo4j_instance_ips | jq -r '.external[]')
-  INTERNAL_IPS=$(terraform output -json neo4j_instance_ips | jq -r '.internal[]')
+  NEO4J_URL=$(terraform output -json neo4j_url 2>/dev/null || echo "")
+  NEO4J_BOLT_URL=$(terraform output -json neo4j_bolt_url 2>/dev/null || echo "")
+  NEO4J_INSTANCE_NAMES=$(terraform output -json neo4j_instance_names | jq -r '.[]' 2>/dev/null || echo "")
+  NEO4J_IP_ADDRESSES=$(terraform output -json neo4j_ip_addresses | jq -r '.[]' 2>/dev/null || echo "")
+  NEO4J_ZONES=$(terraform output -json neo4j_instance_zones | jq -r '.[]' 2>/dev/null || echo "")
   
   # Log outputs
-  log "Neo4j URLs: $NEO4J_URLS"
-  log "Neo4j Bolt Endpoints: $NEO4J_BOLT_ENDPOINTS"
+  log "Neo4j URL: $NEO4J_URL"
+  log "Neo4j Bolt URL: $NEO4J_BOLT_URL"
   log "Neo4j Instance Names: $NEO4J_INSTANCE_NAMES"
-  log "Neo4j External IPs: $EXTERNAL_IPS"
-  log "Neo4j Internal IPs: $INTERNAL_IPS"
-  
-  # Get the project ID from the instance self-link
-  INSTANCE_SELF_LINK=$(terraform output -json neo4j_instance_self_links | jq -r '.[]' | head -1)
-  if [ -n "$INSTANCE_SELF_LINK" ]; then
-    # Extract project ID from self_link - format is typically projects/PROJECT_ID/zones/ZONE/instances/NAME
-    ACTUAL_PROJECT_ID=$(echo $INSTANCE_SELF_LINK | sed -n 's/.*projects\/\([^\/]*\)\/.*/\1/p')
-    
-    if [ -n "$ACTUAL_PROJECT_ID" ]; then
-      log "Setting active project to: $ACTUAL_PROJECT_ID"
-      # Set the active project
-      gcloud config set project "$ACTUAL_PROJECT_ID"
-      # Update TEST_PROJECT_ID to match the actual project
-      TEST_PROJECT_ID=$ACTUAL_PROJECT_ID
-    else
-      log "Could not parse project ID from self-link: $INSTANCE_SELF_LINK, using current project: $TEST_PROJECT_ID"
-    fi
-  else
-    log "Could not determine project ID from instance self-link, using current project: $TEST_PROJECT_ID"
-  fi
+  log "Neo4j IP Addresses: $NEO4J_IP_ADDRESSES"
+  log "Neo4j Zones: $NEO4J_ZONES"
   
   # Verify instances are running
   for instance in $NEO4J_INSTANCE_NAMES; do
-    STATUS=$(gcloud compute instances describe "$instance" --zone="$TEST_ZONE" --format="value(status)")
+    STATUS=$(gcloud compute instances describe "$instance" --zone="$TEST_ZONE" --format="value(status)" 2>/dev/null || echo "NOT_FOUND")
     if [ "$STATUS" != "RUNNING" ]; then
       log "Instance $instance is not running (status: $STATUS)." "ERROR"
       return 1
@@ -164,25 +147,53 @@ verify_deployment() {
   # Wait for Neo4j to be accessible
   log "Waiting for Neo4j to be accessible..."
   
-  for ip in $EXTERNAL_IPS; do
-    # Try to connect to Neo4j Browser port
-    RETRY_COUNT=0
-    MAX_RETRIES=30
-    while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-      if nc -z -w 5 "$ip" 7474; then
-        log "Neo4j Browser on $ip is accessible." "SUCCESS"
-        break
-      fi
-      RETRY_COUNT=$((RETRY_COUNT+1))
-      log "Waiting for Neo4j Browser on $ip to be accessible (attempt $RETRY_COUNT/$MAX_RETRIES)..."
-      sleep 10
-    done
-    
-    if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-      log "Neo4j Browser on $ip is not accessible after $MAX_RETRIES attempts." "ERROR"
-      return 1
+  # Extract IP from the Neo4J_URL (format: http://IP:7474) and remove quotes
+  IP=$(echo $NEO4J_URL | sed 's|http://||' | sed 's|:7474||' | tr -d '"' | xargs)
+  
+  log "Checking Neo4j Browser on IP: $IP"
+  
+  # Try to connect to Neo4j Browser port
+  RETRY_COUNT=0
+  MAX_RETRIES=30
+  while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if curl -s --connect-timeout 5 http://$IP:7474 > /dev/null; then
+      log "Neo4j Browser on $IP is accessible." "SUCCESS"
+      break
     fi
+    RETRY_COUNT=$((RETRY_COUNT+1))
+    log "Waiting for Neo4j Browser on $IP to be accessible (attempt $RETRY_COUNT/$MAX_RETRIES)..."
+    sleep 10
   done
+  
+  if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+    log "Neo4j Browser on $IP is not accessible after $MAX_RETRIES attempts." "ERROR"
+    return 1
+  fi
+  
+  # Extract bolt IP and port from the NEO4J_BOLT_URL
+  BOLT_URL=$(echo $NEO4J_BOLT_URL | tr -d '"' | xargs)
+  BOLT_IP=$(echo $BOLT_URL | sed 's|bolt://||' | cut -d':' -f1)
+  BOLT_PORT=$(echo $BOLT_URL | sed 's|bolt://||' | cut -d':' -f2)
+  
+  log "Checking Neo4j Bolt connection on $BOLT_IP:$BOLT_PORT"
+  
+  # Try to connect to Neo4j Bolt port
+  RETRY_COUNT=0
+  MAX_RETRIES=30
+  while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if nc -z -w 5 $BOLT_IP $BOLT_PORT 2>/dev/null; then
+      log "Neo4j Bolt port on $BOLT_IP:$BOLT_PORT is accessible." "SUCCESS"
+      break
+    fi
+    RETRY_COUNT=$((RETRY_COUNT+1))
+    log "Waiting for Neo4j Bolt port on $BOLT_IP:$BOLT_PORT to be accessible (attempt $RETRY_COUNT/$MAX_RETRIES)..."
+    sleep 10
+  done
+  
+  if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+    log "Neo4j Bolt port on $BOLT_IP:$BOLT_PORT is not accessible after $MAX_RETRIES attempts." "ERROR"
+    return 1
+  fi
   
   log "Deployment verified successfully." "SUCCESS"
   return 0
@@ -192,8 +203,7 @@ verify_deployment() {
 cleanup_resources() {
   if [ "$1" == "--cleanup" ]; then
     log "Cleaning up resources..."
-    # Set the GOOGLE_PROJECT environment variable for Terraform
-    export GOOGLE_PROJECT=$TEST_PROJECT_ID
+    # The project_id is already set in the terraform.tfvars file
     terraform destroy -var-file="$TEST_VAR_FILE" -auto-approve | tee -a $LOG_FILE
     log "Resources cleaned up successfully." "SUCCESS"
   else
