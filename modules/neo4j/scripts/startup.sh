@@ -99,11 +99,11 @@ install_neo4j() {
     apt-get update
     
     # Pre-accept the license for non-interactive installation
-    if [[ "${license_type}" == "Evaluation" ]]; then
+    if [[ "${license_type}" == "evaluation" ]]; then
         echo "Setting up evaluation license..."
         echo "neo4j-enterprise neo4j/accept-license select Accept evaluation license" | debconf-set-selections
     else
-        echo "Setting up enterprise license..."
+        echo "Setting up enterprise license (BYOL)..."
         echo "neo4j-enterprise neo4j/accept-license select Accept commercial license" | debconf-set-selections
     fi
     
