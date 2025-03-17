@@ -1,8 +1,6 @@
 project_id       = "launcher-development-191917"
 region           = "us-central1"
 zone             = "us-central1-a"
-deployment_name  = "test"
-image            = "projects/launcher-public/global/images/neo4j-enterprise-edition-byol-v20250305"
 network_name     = "test-network"
 subnetwork_name  = "test-subnet"
 create_network   = true

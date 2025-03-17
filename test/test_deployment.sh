@@ -53,6 +53,12 @@ check_prerequisites() {
     exit 1
   fi
   
+  # Check if netcat is installed
+  if ! command_exists nc; then
+    log "netcat (nc) is not installed. Please install it for port checking." "ERROR"
+    exit 1
+  fi
+  
   # Check if test var file exists
   if [ ! -f "$TEST_VAR_FILE" ]; then
     log "Test variable file $TEST_VAR_FILE not found." "ERROR"
@@ -161,6 +167,31 @@ verify_deployment() {
   
   if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
     log "Neo4j Browser on $IP is not accessible after $MAX_RETRIES attempts." "ERROR"
+    return 1
+  fi
+  
+  # Extract bolt IP and port from the NEO4J_BOLT_URL
+  BOLT_URL=$(echo $NEO4J_BOLT_URL | tr -d '"' | xargs)
+  BOLT_IP=$(echo $BOLT_URL | sed 's|bolt://||' | cut -d':' -f1)
+  BOLT_PORT=$(echo $BOLT_URL | sed 's|bolt://||' | cut -d':' -f2)
+  
+  log "Checking Neo4j Bolt connection on $BOLT_IP:$BOLT_PORT"
+  
+  # Try to connect to Neo4j Bolt port
+  RETRY_COUNT=0
+  MAX_RETRIES=30
+  while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if nc -z -w 5 $BOLT_IP $BOLT_PORT 2>/dev/null; then
+      log "Neo4j Bolt port on $BOLT_IP:$BOLT_PORT is accessible." "SUCCESS"
+      break
+    fi
+    RETRY_COUNT=$((RETRY_COUNT+1))
+    log "Waiting for Neo4j Bolt port on $BOLT_IP:$BOLT_PORT to be accessible (attempt $RETRY_COUNT/$MAX_RETRIES)..."
+    sleep 10
+  done
+  
+  if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+    log "Neo4j Bolt port on $BOLT_IP:$BOLT_PORT is not accessible after $MAX_RETRIES attempts." "ERROR"
     return 1
   fi
   
