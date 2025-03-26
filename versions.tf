@@ -10,4 +10,7 @@ terraform {
 
 provider "google" {
   project = var.project_id
+  default_labels = {
+    goog-partner-solution = "isol_plb32_0014m00001h36fwqay_2yv7nsvohejgjrstgxrez64s7ic32kub"
+  }
 } 
